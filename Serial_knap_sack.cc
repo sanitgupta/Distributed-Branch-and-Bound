@@ -10,7 +10,7 @@
 
 
 #define n 387
-#define m 1
+#define m 388
 
 
 double z_opt;
@@ -119,6 +119,13 @@ int main(int argc, char** argv) {
 	B[0] = K;
 	for(int i=0;i<n;i++)
 		cin>>C[i]>>A[0][i];
+	for(int j=1;j<m;j++){
+		B[j] = 1;
+		for(int k=0;k<n;k++){
+		if(j==k+1) A[j][k] = 1;
+		else A[j][k] = 0;
+	}
+	}
     /*A[0][0] = 1;
     A[0][1] = 2;
     A[1][0] = 2;
@@ -145,7 +152,7 @@ int main(int argc, char** argv) {
     for(int i=0; i<n; i++)
     {
         min_max[i] = 0;//-infinity;
-        min_max[i+n] = 1;
+        min_max[i+n] = inf;
     }
 
     //operations_research::Simplex(A, B, C, min_max, z_opt, x_opt);
