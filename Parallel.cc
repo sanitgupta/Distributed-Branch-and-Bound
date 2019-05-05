@@ -10,7 +10,7 @@
 using namespace std;
 
 #define n 2
-#define m 3
+#define m 2
 
 bool double_is_int(double num) {
    double absolute = abs(num);
@@ -37,15 +37,19 @@ namespace operations_research { ///
 
 	    MPVariable* variables[n];
 
+	    int infinity = solver.infinity(); ///
+
 	    for(int i=0; i<n; i++)
 	    {
+	    	if(A_range[i+n] == numeric_limits<int>::max() )
+	    		A_range[i+n] = infinity;
 	        variables[i] = solver.MakeNumVar(A_range[i], A_range[i+n], "var");
 	        //variables[i] = solver.MakeNumVar(0, 2, to_string(i));
 	        //objective->SetCoefficient(variables[i], C[i]);
 	    }
 
 	   
-	    int infinity = solver.infinity(); ///
+
 	    MPConstraint* constraints[m];
 	    for(int i = 0; i < m; i++)
 	    {
@@ -64,9 +68,9 @@ namespace operations_research { ///
 
 		objective->SetMaximization(); //Can be changed
 
-	    printf("\nNumber of variables = %d", solver.NumVariables());
+	    // printf("\nNumber of variables = %d", solver.NumVariables());
 
-	    printf("\nNumber of constraints = %d", solver.NumConstraints());
+	    // printf("\nNumber of constraints = %d", solver.NumConstraints());
 
 	    solver.Solve(); //return
 
@@ -87,9 +91,17 @@ int main(int argc, char **argv)
     int first_double_index, color;
 
 	//Initializing all variables in LP
-    C[0] = 3, C[1] = 4;
-    A[0][0] = 1, A[0][1] = 2, A[1][0] = -3, A[1][1] = 1, A[2][0] = 1, A[2][1] = -1;
-    B[0] = 14, B[1] = 0, B[2] = 2;
+    A[0][0] = 1;
+    A[0][1] = 2;
+    A[1][0] = 2;
+    A[1][1] = 1;
+
+    B[0] = 5;
+    B[1] = 5;
+
+    C[0] = 1;
+    C[1] = 1;
+
 
     //3x + 4y
     // x + 2y <= 14.
@@ -107,7 +119,7 @@ int main(int argc, char **argv)
     for(int i=0; i<n; i++)
     {
         A_range[i] = 0;
-        A_range[i+n] = infinity;
+        A_range[i+n] = int_infinity;
     }
 
     int pid, total_proc;
@@ -144,25 +156,31 @@ int main(int argc, char **argv)
     if(A_range[0] != -1.0)
     {
     	operations_research::MIPSolver(A, B, C, A_range, LOCAL_OPT, LOCAL_VAL);
-
+    	// cout << pid << " " << LOCAL_OPT[0] << endl;
 	    if(LOCAL_OPT[0] > GLOBAL_OPT)     //The case when Local Value is greater than current global.
 	    {
+	    	// cout << pid << " " << LOCAL_OPT[0] << " " << GLOBAL_OPT << endl;
 	    	first_double_index = is_array_int(LOCAL_VAL);
+	    	// cout << pid << " " << first_double_index  << " " << LOCAL_VAL[first_double_index] << endl;
 	    	if (first_double_index == n)
 	    	{
+	    		// cout << pid << " " << first_double_index << " " << GLOBAL_OPT; 
 	    		GLOBAL_OPT = LOCAL_OPT[0];
 	    		A_range[2*n] = GLOBAL_OPT;
 	    		for (int i=0; i<n; i++)
 	    		{
 	    			GLOBAL_VAL[i] = LOCAL_VAL[i];
     				A_range[2*n + 1 + i] = GLOBAL_VAL[i];
+    				// cout << GLOBAL_VAL[i] << " " << endl;
 	    		}
+	    		// cout << endl;
 	    		A_range[0] = -1;  //Disable further computation
 	    	}
 	    	else
 	    	{
 	    		int val = LOCAL_VAL[first_double_index];
-	    		A_range[first_double_index] = val;  //Integer Part only
+	    		A_range[first_double_index + n] = val;  //Integer Part only
+	    		// cout << pid << " " << A_range[first_double_index + n] << endl;
 	    	}
 
 	    }
@@ -183,18 +201,20 @@ int main(int argc, char **argv)
 
     G_OPT_Comparer.val = GLOBAL_OPT;
     MPI_Comm_rank(depth_comm, &G_OPT_Comparer.rank);;  
-    
+
+	// cout << "Pritngint Global Opt before MPI_Allreduce " << pid << " " << GLOBAL_OPT << endl;    
     //MPI ALL REDUCE with comm for same depth
 	MPI_Allreduce( &G_OPT_Comparer, &G_OPT_Receiver, 1, MPI_DOUBLE_INT, MPI_MAXLOC, depth_comm);
-	printf("%f %d \n", G_OPT_Receiver.val, G_OPT_Receiver.rank);
+	// printf("%f %d \n", G_OPT_Receiver.val, G_OPT_Receiver.rank);
 	MPI_Bcast( GLOBAL_VAL, n, MPI_DOUBLE, G_OPT_Receiver.rank, depth_comm);
 
 	GLOBAL_OPT = G_OPT_Receiver.val;
+	// cout << "Pritngint Global Opt after MPI_Allreduce " << pid << " " << GLOBAL_OPT << endl; 
 	A_range[2*n] = GLOBAL_OPT;
 	for (int i=0; i<n; i++)
 		A_range[2*n + 1 + i] = GLOBAL_VAL[i];
 
-	if (2*pid+1 <= total_proc)
+	if (2*pid+1 < total_proc)
 		{
 			if(A_range[0] == -1)
 			{
@@ -203,12 +223,25 @@ int main(int argc, char **argv)
     		}
     		else
     		{
+    			// cout << pid << " " << A_range[first_double_index + n] << endl;
     			MPI_Send( A_range, 2*n + n+1, MPI_DOUBLE, 2*pid, 0, MPI_COMM_WORLD);
-    			A_range[first_double_index + n] = A_range[first_double_index] + 1;
-    			A_range[first_double_index] = 0;
+    			A_range[first_double_index] = A_range[first_double_index + n] + 1;
+    			A_range[first_double_index + n] = int_infinity;
+    			// cout << pid << " " << A_range[first_double_index] << endl;
+    			// cout << "Check status before " << A_range[0] << " " << A_range[1] << " " << A_range[2] << " " << A_range[3] << endl;
     			MPI_Send( A_range, 2*n + n+1, MPI_DOUBLE, 2*pid+1, 0, MPI_COMM_WORLD);
     		}
     	}
+    else
+    {
+    	if (pid == total_proc - 1)
+    	{
+    		cout << "The optimal value is " << GLOBAL_OPT << endl;
+    		cout << "The optimal variable values are " << endl;
+    		for(int i=0; i<n; i++)
+    			cout << GLOBAL_VAL[i] << endl;
+    	}
+    }
     	
     }
 
