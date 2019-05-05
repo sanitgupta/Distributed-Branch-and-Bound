@@ -9,9 +9,13 @@ First of all, rename the Makefile_Serial or Makefile_Parallel to Makefile, depen
 
 After that,
 For Serial -
+
 make build SOURCE=Serial.cc
+
 ./bin/Serial
 
 For Parallel-
+
 make build SOURCE=Parallel.cc
+
 mpirun -np 8 ./bin/Parallel
