@@ -7,14 +7,15 @@ The code for the Serial and Parallel versions is contained in two files respecti
 
 First of all, rename the Makefile_Serial or Makefile_Parallel to Makefile, depending upon the version you wish to compile.
 
-After that,
+Then
+
 For Serial -
 
 make build SOURCE=Serial.cc
 
 ./bin/Serial
 
-For Parallel-
+For Parallel -
 
 make build SOURCE=Parallel.cc
 
