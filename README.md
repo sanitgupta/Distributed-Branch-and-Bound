@@ -1,4 +1,7 @@
-# Distributed-Branch-and-Bound
+# distributed-branch-and-bound
+
+Branch and Bound is an algorithm for Mixed Integer Linear Programming
+Here, we have a developed a version of Branch and Bound which runs on parallel architectures and hence is sped up considerably.
 
 The code for the Serial and Parallel versions is contained in two files respectively - Serial.cc and Parallel.cc
 
